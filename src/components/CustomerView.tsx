@@ -14,6 +14,9 @@ import {
   Package,
   CheckCircle2,
   Send,
+  ArrowRightLeft,
+  Check,
+  MessageCircle,
 } from "lucide-react";
 
 const STATUS_STEPS: { key: string; label: string }[] = [
@@ -24,6 +27,115 @@ const STATUS_STEPS: { key: string; label: string }[] = [
   { key: "Delivered", label: "Delivered" },
   { key: "Completed", label: "Completed" },
 ];
+
+function ComparisonModal({ product, onClose }: { product: Product; onClose: () => void }) {
+  const { products, addToCart } = useAppState();
+  const alt = products.find((p) => p.id === product.cheaperAlternativeId);
+  if (!alt) return null;
+  const savings = product.price - alt.price;
+
+  return (
+    <div className="fixed inset-0 z-[105] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white w-full max-w-md rounded-2xl overflow-hidden">
+        <div className="px-5 py-4 border-b border-navy-950/10 flex items-center justify-between">
+          <h3 className="font-display font-semibold text-navy-950 flex items-center gap-2">
+            <ArrowRightLeft size={16} className="text-gold-500" /> Mshauri AI Price Match
+          </h3>
+          <button onClick={onClose} aria-label="Close" className="text-navy-900/40 hover:text-navy-950 focus-ring rounded">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="p-5 space-y-4">
+          <p className="text-sm text-navy-900/60 leading-snug">
+            Mshauri AI found a cheaper alternative for this item from another wholesaler.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-xl border border-red-100 bg-red-50/40 p-3 space-y-1">
+              <span className="text-[10px] uppercase font-bold text-red-500">Current pick</span>
+              <p className="text-sm font-semibold text-navy-950 leading-snug">{product.name}</p>
+              <p className="text-xs text-navy-900/45">{product.wholesalerName}</p>
+              <p className="font-semibold text-navy-950">KES {product.price.toLocaleString()}</p>
+            </div>
+            <div className="rounded-xl border border-green-200 bg-green-50/60 p-3 space-y-1 relative">
+              <span className="text-[10px] uppercase font-bold text-green-600">AI match</span>
+              <p className="text-sm font-semibold text-navy-950 leading-snug">{alt.name}</p>
+              <p className="text-xs text-navy-900/45">{alt.wholesalerName}</p>
+              <p className="font-semibold text-green-600">KES {alt.price.toLocaleString()}</p>
+              <div className="absolute top-2 right-2 w-4 h-4 rounded-full bg-green-500 text-white flex items-center justify-center">
+                <Check size={10} />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-lg bg-gold-500/10 text-gold-600 text-sm font-semibold px-3 py-2 flex items-center justify-between">
+            <span>Estimated savings</span>
+            <span>KES {savings.toLocaleString()} ({Math.round((savings / product.price) * 100)}%)</span>
+          </div>
+        </div>
+        <div className="px-5 py-4 bg-navy-950/[0.03] flex justify-end gap-2">
+          <button onClick={onClose} className="text-xs font-semibold px-3 py-2 rounded-lg border border-navy-950/15 text-navy-900/70 focus-ring">
+            Keep current
+          </button>
+          <button
+            onClick={() => { addToCart(alt, 1); onClose(); }}
+            className="text-xs font-semibold px-3 py-2 rounded-lg bg-green-600 text-white focus-ring"
+          >
+            Swap and add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeliveryChat({ order }: { order: ReturnType<typeof useAppState>["orders"][number] }) {
+  const { chatMessages, sendRiderMessage } = useAppState();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const relevant = chatMessages; // demo scope: single active thread
+
+  return (
+    <div className="border-t border-navy-950/10 mt-3 pt-3">
+      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 text-xs font-medium text-navy-900/60 focus-ring rounded">
+        <MessageCircle size={13} /> {open ? "Hide" : "Message"} {order.riderName ?? "rider"}
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="max-h-28 overflow-y-auto space-y-1.5 bg-navy-950/[0.03] rounded-lg p-2">
+            {relevant.length === 0 ? (
+              <p className="text-[11px] text-navy-900/40 text-center py-2">No messages yet.</p>
+            ) : (
+              relevant.map((m) => (
+                <div key={m.id} className={`flex ${m.sender === "customer" ? "justify-end" : "justify-start"}`}>
+                  <span className={`text-[11px] rounded-lg px-2 py-1 max-w-[80%] ${m.sender === "customer" ? "bg-navy-950 text-white" : "bg-white text-navy-950 border border-navy-950/10"}`}>
+                    {m.text}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && text.trim()) { sendRiderMessage(text); setText(""); }
+              }}
+              placeholder="Type a message…"
+              className="flex-1 text-xs rounded-lg border border-navy-950/15 px-2.5 py-1.5 focus-ring"
+            />
+            <button
+              onClick={() => { if (text.trim()) { sendRiderMessage(text); setText(""); } }}
+              aria-label="Send message"
+              className="w-7 h-7 rounded-lg bg-navy-950 text-white flex items-center justify-center shrink-0 focus-ring"
+            >
+              <Send size={11} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CartDrawer({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { cart, updateCartQty, removeFromCart, appliedCoupon, applyCoupon, removeCoupon, initiateStkPush } =
@@ -252,6 +364,20 @@ function AiAssistant() {
           </button>
         )}
       </div>
+      <div className="px-3 py-2 border-t border-navy-950/10 flex gap-1.5 overflow-x-auto">
+        {(lang === "en"
+          ? ["Cheaper maize flour?", "Sugar stock levels?", "Any fraud alerts?"]
+          : ["Unga rahisi?", "Akiba ya sukari?", "Tahadhari za ulaghai?"]
+        ).map((s) => (
+          <button
+            key={s}
+            onClick={() => setInput(s)}
+            className="text-[10px] shrink-0 px-2 py-1 rounded-lg border border-gold-500/25 bg-gold-500/8 text-gold-600 font-medium focus-ring"
+          >
+            {s}
+          </button>
+        ))}
+      </div>
       <div className="p-2 border-t border-navy-950/10 flex gap-1.5">
         <input
           value={input}
@@ -354,6 +480,8 @@ function OrderTracker() {
             <CheckCircle2 size={16} /> Delivered and payment released
           </div>
         )}
+
+        {rider && order.status !== "Completed" && <DeliveryChat order={order} />}
       </div>
     </div>
   );
@@ -362,6 +490,7 @@ function OrderTracker() {
 function ProductCard({ product }: { product: Product }) {
   const { addToCart, products } = useAppState();
   const [qty, setQty] = useState(1);
+  const [comparing, setComparing] = useState(false);
   const cheaper = product.cheaperAlternativeId
     ? products.find((p) => p.id === product.cheaperAlternativeId)
     : undefined;
@@ -383,13 +512,17 @@ function ProductCard({ product }: { product: Product }) {
       </div>
 
       {cheaper && (
-        <div className="flex items-center gap-1.5 text-[11px] text-gold-600 bg-gold-500/8 rounded-lg px-2 py-1.5 mb-2">
-          <Sparkles size={11} />
+        <button
+          onClick={() => setComparing(true)}
+          className="flex items-center gap-1.5 text-[11px] text-gold-600 bg-gold-500/8 rounded-lg px-2 py-1.5 mb-2 hover:bg-gold-500/14 transition-colors text-left focus-ring"
+        >
+          <Sparkles size={11} className="shrink-0" />
           <span>
-            Mshauri AI: save KES {(product.price - cheaper.price).toLocaleString()} with {cheaper.wholesalerName}
+            Mshauri AI: save KES {(product.price - cheaper.price).toLocaleString()} — compare alternative
           </span>
-        </div>
+        </button>
       )}
+      {comparing && cheaper && <ComparisonModal product={product} onClose={() => setComparing(false)} />}
 
       <div className="mt-auto">
         <div className="flex items-baseline justify-between mb-2">

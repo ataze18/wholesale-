@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAppState } from "../state";
-import { Bike, MapPin, Package, Camera, Wallet, TrendingUp, ChevronRight } from "lucide-react";
+import { Bike, MapPin, Package, Camera, Wallet, TrendingUp, ChevronRight, MessageCircle, Send } from "lucide-react";
 
 const NEXT_STATUS: Record<string, string | null> = {
   RiderAssigned: "PickedUp",
@@ -13,6 +13,55 @@ const ACTION_LABEL: Record<string, string> = {
   PickedUp: "Start delivery",
   InTransit: "Mark delivered",
 };
+
+function RiderChat() {
+  const { chatMessages, sendRiderMessage } = useAppState();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+
+  return (
+    <div className="mt-3 pt-3 border-t border-white/10">
+      <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 text-xs font-medium text-white/70 focus-ring rounded">
+        <MessageCircle size={13} /> {open ? "Hide" : "Message"} customer
+      </button>
+      {open && (
+        <div className="mt-2 space-y-2">
+          <div className="max-h-28 overflow-y-auto space-y-1.5 bg-black/20 rounded-lg p-2">
+            {chatMessages.length === 0 ? (
+              <p className="text-[11px] text-white/40 text-center py-2">No messages yet.</p>
+            ) : (
+              chatMessages.map((m) => (
+                <div key={m.id} className={`flex ${m.sender === "rider" ? "justify-end" : "justify-start"}`}>
+                  <span className={`text-[11px] rounded-lg px-2 py-1 max-w-[80%] ${m.sender === "rider" ? "bg-gold-500 text-navy-950" : "bg-white/10 text-white"}`}>
+                    {m.text}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
+          <div className="flex gap-1.5">
+            <input
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && text.trim()) { sendRiderMessage(text); setText(""); }
+              }}
+              placeholder="Type a message…"
+              className="flex-1 text-xs rounded-lg border border-white/15 bg-white/5 text-white placeholder:text-white/30 px-2.5 py-1.5 focus-ring"
+            />
+            <button
+              onClick={() => { if (text.trim()) { sendRiderMessage(text); setText(""); } }}
+              aria-label="Send message"
+              className="w-7 h-7 rounded-lg bg-gold-500 text-navy-950 flex items-center justify-center shrink-0 focus-ring"
+            >
+              <Send size={11} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function RiderView() {
   const { orders, riders, acceptOrder, updateOrderStatus, uploadDeliveryPhoto } = useAppState();
@@ -94,6 +143,7 @@ export default function RiderView() {
                     : ACTION_LABEL[o.status]}
                 </button>
               )}
+              <RiderChat />
             </div>
           ))}
         </div>

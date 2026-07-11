@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useAppState } from "../state";
 import {
   DollarSign,
@@ -8,11 +9,24 @@ import {
   ShieldCheck,
   Lock,
   KeyRound,
+  Check,
+  Sparkles,
 } from "lucide-react";
 
+const INITIAL_ALERTS = [
+  { id: "al1", title: "Multiple checkout attempts", source: "IP 197.248.91.5 (Embakasi)", time: "8:51 PM" },
+  { id: "al2", title: "Suspicious bulk quantity edit", source: "Mwamba Millers Wholesale", time: "8:44 PM" },
+];
+
 export default function AdminView() {
-  const { telemetry, auditLogs, rateLimitEnabled, setRateLimitEnabled, twoFactorEnabled, setTwoFactorEnabled, orders } =
+  const { telemetry, auditLogs, rateLimitEnabled, setRateLimitEnabled, twoFactorEnabled, setTwoFactorEnabled, orders, addSystemToast } =
     useAppState();
+  const [alerts, setAlerts] = useState(INITIAL_ALERTS);
+
+  const dismissAlert = (id: string) => {
+    setAlerts((prev) => prev.filter((a) => a.id !== id));
+    addSystemToast("Alert Cleared", "The security alert has been reviewed and resolved.", "in-app");
+  };
 
   const stats = [
     { label: "Gross merchandise value", value: `KES ${telemetry.gmv.toLocaleString()}`, icon: DollarSign },
@@ -91,6 +105,36 @@ export default function AdminView() {
             </button>
           </div>
         </div>
+      </div>
+
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Sparkles size={16} className="text-gold-500" />
+          <h2 className="font-display text-lg font-semibold text-navy-950">Fraud & support alerts</h2>
+        </div>
+        {alerts.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-navy-950/8 p-8 text-center">
+            <p className="text-sm text-navy-900/50">No active alerts. Platform looks clean.</p>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 gap-3">
+            {alerts.map((a) => (
+              <div key={a.id} className="bg-amber-50 border border-amber-200/60 rounded-xl p-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold text-navy-950">{a.title}</p>
+                  <span className="text-[10px] uppercase font-bold text-amber-600 bg-amber-100 rounded px-1.5 py-0.5 shrink-0">Active</span>
+                </div>
+                <p className="text-xs text-navy-900/50">{a.source} · {a.time}</p>
+                <button
+                  onClick={() => dismissAlert(a.id)}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium bg-white border border-navy-950/10 rounded-lg py-1.5 text-navy-900/70 focus-ring"
+                >
+                  <Check size={12} /> Dismiss & log resolved
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div>
